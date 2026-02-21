@@ -5,6 +5,20 @@
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                             http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.6.xsd">
 
+    <!-- Создание последовательности для аудита, если её нет -->
+    <changeSet id="create-audit-seq" author="Eugene">
+        <preConditions onFail="CONTINUE">
+            <not>
+                <sequenceExists sequenceName="audit_id_seq" schemaName="logging"/>
+            </not>
+        </preConditions>
+        <createSequence sequenceName="audit_id_seq"
+                        schemaName="logging"
+                        startValue="1"
+                        incrementBy="50"/>
+    </changeSet>
+
+    <!-- Создание таблицы audit -->
     <changeSet id="create-audit-table" author="Eugene">
         <preConditions onFail="CONTINUE">
             <not>
@@ -12,7 +26,7 @@
             </not>
         </preConditions>
         <createTable tableName="audit" schemaName="logging">
-            <column name="id" type="BIGSERIAL">
+            <column name="id" type="BIGINT" defaultValueComputed="nextval('logging.audit_id_seq')">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
             <column name="document_id" type="BIGINT">

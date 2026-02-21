@@ -13,3 +13,10 @@ spring:
   docker:
     compose:
       file: doc-stat-history\compose.yaml
+  jpa:
+    properties:
+      hibernate:
+        order_updates: true
+        jdbc:
+          batch_size: 50
+          batch_versioned_data: true

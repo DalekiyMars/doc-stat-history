@@ -6,10 +6,6 @@ spring:
     url: jdbc:postgresql://localhost:13000/document-util
     user: admin
     password: secret
-    parameters:
-      retryAttempts: 10
-      retryInterval: 3
-      max-request-size: 20MB
   docker:
     compose:
       file: doc-stat-history\compose.yaml
@@ -18,5 +14,16 @@ spring:
       hibernate:
         order_updates: true
         jdbc:
-          batch_size: 50
+          batch_size: 100
           batch_versioned_data: true
+  threads:
+    virtual:
+      enabled: true
+
+app:
+  document:
+    number-prefix: DOC        # префикс уникального номера — настраивается без перекомпиляции
+  worker:
+    batch-size: 50            # размер пачки для обоих воркеров
+    submit-delay-ms: 30000    # интервал SUBMIT-worker
+    approve-delay-ms: 30000   # интервал APPROVE-worker

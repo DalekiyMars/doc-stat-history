@@ -46,6 +46,9 @@
             <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
+            <column name="version" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
         </createTable>
 
         <sql>ALTER TABLE entity_tables.documents ADD CONSTRAINT chk_status CHECK (status IN ('DRAFT','SUBMITTED','APPROVED'));</sql>

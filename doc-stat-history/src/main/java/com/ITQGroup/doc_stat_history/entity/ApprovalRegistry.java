@@ -23,8 +23,9 @@ import java.time.LocalDateTime;
 public class ApprovalRegistry {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "documents_seq")
-    @SequenceGenerator(name = "documents_seq", sequenceName = "entity_tables.documents_id_seq")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "registry_seq")
+    @SequenceGenerator(name = "registry_seq",
+            sequenceName = "entity_tables.approval_registry_id_seq")
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)

@@ -15,6 +15,7 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -25,8 +26,8 @@ import java.time.LocalDateTime;
 public class Audit {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "documents_seq")
-    @SequenceGenerator(name = "documents_seq", sequenceName = "entity_tables.documents_id_seq")
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "audit_seq")
+    @SequenceGenerator(name = "audit_seq", sequenceName = "logging.audit_id_seq")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -37,6 +38,7 @@ public class Audit {
     private String actionAuthor;
 
     @Column(name = "action_time", nullable = false)
+    @CreationTimestamp
     private LocalDateTime actionTime;
 
     @Enumerated(EnumType.STRING)

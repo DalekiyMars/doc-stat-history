@@ -1,3 +1,15 @@
 spring:
   application:
     name: doc-stat-history
+  liquibase:
+    change-log: classpath:db/changelog/root-changelog.xml
+    url: jdbc:postgresql://localhost:13000/document-util
+    user: admin
+    password: secret
+    parameters:
+      retryAttempts: 10
+      retryInterval: 3
+      max-request-size: 20MB
+  docker:
+    compose:
+      file: doc-stat-history\compose.yaml

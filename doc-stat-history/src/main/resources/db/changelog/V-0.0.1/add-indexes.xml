@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.6.xsd">
+
+    <changeSet id="add-indexes-for-documents" author="Eugene">
+        <sql>
+            CREATE INDEX IF NOT EXISTS idx_documents_status_created ON entity_tables.documents (status, created_at);
+            CREATE INDEX IF NOT EXISTS idx_documents_author_created ON entity_tables.documents (author, created_at);
+            CREATE INDEX IF NOT EXISTS idx_audit_document ON logging.audit(document_id);
+            CREATE INDEX IF NOT EXISTS idx_documents_created_at ON entity_tables.documents(created_at);
+        </sql>
+    </changeSet>
+</databaseChangeLog>

@@ -5,8 +5,8 @@ plugins {
 }
 
 group = 'com.ITQGroup'
-version = '0.0.1-SNAPSHOT'
-description = 'Demo project for Spring Boot'
+version = '0.0.1'
+description = 'Document Management Service'
 
 java {
 	toolchain {

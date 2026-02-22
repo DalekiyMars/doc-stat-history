@@ -16,7 +16,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * Выделен в отдельный бин специально, чтобы @Transactional(REQUIRES_NEW)
@@ -31,9 +33,8 @@ public class TransitionExecutor {
     private final DocumentRepository documentRepository;
     private final AuditRepository auditRepository;
     private final ApprovalRegistryRepository registryRepository;
+    private final Clock clock;
 
-    // REQUIRES_NEW — собственная транзакция на каждый документ.
-    // Если упадёт, откатится только этот один документ, остальные не затронуты.
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public TransitionResult submitOne(Long id, String initiator, String comment) {
         return documentRepository.findByIdForUpdate(id)
@@ -55,16 +56,14 @@ public class TransitionExecutor {
                 });
     }
 
-    // REQUIRES_NEW + rollbackFor — при любом исключении
-    // вся транзакция откатывается: документ остаётся в SUBMITTED, аудит не пишется.
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public TransitionResult approveOne(Long id, String initiator, String comment) {
         Document doc = documentRepository.findByIdForUpdate(id).orElse(null);
 
-        if (doc == null) {
+        if (Objects.isNull(doc)) {
             return new TransitionResult(id, ResultStatus.NOT_FOUND, "Document not found");
         }
-        if (doc.getStatus() != DocumentStatus.SUBMITTED) {
+        if (!Objects.equals(doc.getStatus(), DocumentStatus.SUBMITTED)) {
             return new TransitionResult(id, ResultStatus.CONFLICT,
                     "Expected SUBMITTED, got " + doc.getStatus());
         }
@@ -73,13 +72,13 @@ public class TransitionExecutor {
         saveAudit(doc, initiator, ActionType.APPROVE, comment);
         documentRepository.save(doc);
 
-        // Запись в реестр. При исключении Spring откатит всю REQUIRES_NEW транзакцию —
+        // Запись в реестр. При исключении Spring откатит всю REQUIRES_NEW транзакцию
         // документ вернётся в SUBMITTED, аудит тоже не сохранится.
         try {
-            ApprovalRegistry registry = new ApprovalRegistry();
-            registry.setDocument(doc);
-            registry.setInitiator(initiator);
-            registry.setApprovedAt(LocalDateTime.now());
+            ApprovalRegistry registry = new ApprovalRegistry()
+                                            .setDocument(doc)
+                                            .setInitiator(initiator)
+                                            .setApprovedAt(LocalDateTime.now(clock));
             registryRepository.save(registry);
             log.info("Document {} approved by {}", id, initiator);
             return new TransitionResult(id, ResultStatus.SUCCESS, null);
@@ -90,12 +89,12 @@ public class TransitionExecutor {
     }
 
     private void saveAudit(Document doc, String initiator, ActionType actionType, String comment) {
-        Audit audit = new Audit();
-        audit.setDocument(doc);
-        audit.setActionAuthor(initiator);
-        audit.setActionTime(LocalDateTime.now());
-        audit.setActionType(actionType);
-        audit.setComment(comment);
+        Audit audit = new Audit()
+                            .setDocument(doc)
+                            .setActionAuthor(initiator)
+                            .setActionTime(LocalDateTime.now(clock))
+                            .setActionType(actionType)
+                            .setComment(comment);
         auditRepository.save(audit);
     }
 }

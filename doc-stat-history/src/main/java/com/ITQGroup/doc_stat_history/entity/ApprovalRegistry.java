@@ -11,6 +11,7 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.hibernate.annotations.CreationTimestamp;
 import jakarta.persistence.Id;
 
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 @Table(name = "approval_registry", schema = "entity_tables")
 @Getter
 @Setter
+@Accessors(chain = true)
 public class ApprovalRegistry {
 
     @Id

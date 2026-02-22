@@ -14,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.ScrollPosition;
+import org.springframework.data.domain.Window;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,11 +33,11 @@ public class DocumentService {
     // Создание документа в статусе DRAFT.
     @Transactional
     public DocumentResponse create(CreateDocumentRequest request) {
-        Document doc = new Document();
-        doc.setAuthor(request.author());
-        doc.setDocName(request.docName());
-        doc.setStatus(DocumentStatus.DRAFT);
-        doc.setUniqueNumber(numberGenerator.generate());
+        Document doc = new Document()
+                            .setAuthor(request.author())
+                            .setDocName(request.docName())
+                            .setStatus(DocumentStatus.DRAFT)
+                            .setUniqueNumber(numberGenerator.generate());
 
         Document saved = documentRepository.save(doc);
         log.info("Document created: id={}, number={}", saved.getId(), saved.getUniqueNumber());
@@ -46,15 +48,16 @@ public class DocumentService {
     public DocumentResponse getById(Long id) {
         Document doc = documentRepository.findById(id)
                 .orElseThrow(() -> new DocumentNotFoundException(id));
+        log.debug("Document found: id={}, number={}", id, doc.toString());
         return mapper.toResponse(doc);
     }
 
     // Получение одного документа вместе с историей аудита.
     @Transactional(readOnly = true)
     public DocumentResponse getWithAudits(Long id) {
-        Document doc = documentRepository.findByIdWithAudits(id)
+        return documentRepository.findByIdWithAudits(id)
+                .map(mapper::toResponseWithAudits)
                 .orElseThrow(() -> new DocumentNotFoundException(id));
-        return mapper.toResponseWithAudits(doc);
     }
 
     // Пакетное получение документов по списку id с пагинацией и сортировкой.
@@ -66,10 +69,12 @@ public class DocumentService {
 
     // Поиск документов с динамическими фильтрами (по createdAt)
     @Transactional(readOnly = true)
-    public Page<DocumentResponse> search(DocumentSearchRequest req, Pageable pageable) {
+    public Window<DocumentResponse> search(DocumentSearchRequest req,
+                                           int limit,
+                                           ScrollPosition scrollPosition) {
         var spec = DocumentSpecification.withFilters(
                 req.status(), req.author(), req.from(), req.to());
-        return documentRepository.findAll(spec, pageable)
+        return documentRepository.scrollBySpec(spec, limit, scrollPosition)
                 .map(mapper::toResponse);
     }
 }

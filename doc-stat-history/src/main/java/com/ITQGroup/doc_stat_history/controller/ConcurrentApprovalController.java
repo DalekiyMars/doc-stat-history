@@ -21,7 +21,6 @@ public class ConcurrentApprovalController {
 
     private final ConcurrentApprovalService concurrentApprovalService;
 
-    // POST /api/v1/documents/{id}/concurrent-approve?threads=5&attempts=10&initiator=Eugene
     // Запускает attempts параллельных попыток утвердить документ.
     // Ожидаемый результат: ровно 1 SUCCESS, остальные CONFLICT.
     @PostMapping("/{id}/concurrent-approve")

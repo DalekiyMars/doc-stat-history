@@ -16,6 +16,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import jakarta.persistence.Id;
@@ -28,6 +29,7 @@ import java.util.List;
 @Table(name = "documents", schema = "entity_tables")
 @Getter
 @Setter
+@Accessors(chain = true)
 public class Document {
 
     @Id

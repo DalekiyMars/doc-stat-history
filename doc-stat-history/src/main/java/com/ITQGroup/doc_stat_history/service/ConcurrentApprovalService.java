@@ -28,17 +28,22 @@ public class ConcurrentApprovalService {
     public ConcurrentApprovalResult testConcurrentApproval(
             Long documentId, int threads, int attempts, String initiator) {
 
-        AtomicInteger successCount  = new AtomicInteger(0);
+        AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger conflictCount = new AtomicInteger(0);
-        AtomicInteger errorCount    = new AtomicInteger(0);
+        AtomicInteger errorCount = new AtomicInteger(0);
 
+        // attempts задач, каждая пытается утвердить один и тот же документ
         List<Callable<TransitionResult>> tasks = new ArrayList<>(attempts);
         for (int i = 0; i < attempts; i++) {
             tasks.add(() -> transitionExecutor.approveOne(documentId, initiator, "concurrent test"));
         }
 
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+        log.info("Concurrent approval START: documentId={}, threads={}, attempts={}",
+                documentId, threads, attempts);
+
+        try (ExecutorService executor = Executors.newFixedThreadPool(threads)) {
             List<Future<TransitionResult>> futures = executor.invokeAll(tasks);
+
             for (Future<TransitionResult> future : futures) {
                 TransitionResult result = future.get();
                 switch (result.result()) {
@@ -48,14 +53,21 @@ public class ConcurrentApprovalService {
                 }
             }
         } catch (Exception e) {
-            log.error("Concurrent approval test error", e);
+            log.error("Concurrent approval test error: documentId={}", documentId, e);
         }
 
         Document finalDoc = documentRepository.findById(documentId)
                 .orElseThrow(() -> new DocumentNotFoundException(documentId));
 
-        log.info("Concurrent test: success={}, conflict={}, error={}, finalStatus={}",
-                successCount, conflictCount, errorCount, finalDoc.getStatus());
+        log.info("Concurrent approval DONE: documentId={}, threads={}, attempts={}, " +
+                        "success={}, conflict={}, error={}, finalStatus={}",
+                documentId, threads, attempts,
+                successCount.get(), conflictCount.get(), errorCount.get(), finalDoc.getStatus());
+
+        if (successCount.get() != 1) {
+            log.warn("Unexpected successCount={} for documentId={} — " +
+                    "expected exactly 1 successful approval", successCount.get(), documentId);
+        }
 
         return new ConcurrentApprovalResult(
                 successCount.get(), conflictCount.get(), errorCount.get(), finalDoc.getStatus());

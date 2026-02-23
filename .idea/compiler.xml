@@ -7,13 +7,13 @@
         <processorPath useClasspath="false">
           <entry name="$USER_HOME$/.gradle/caches/modules-2/files-2.1/org.projectlombok/lombok/1.18.42/8365263844ebb62398e0dc33057ba10ba472d3b8/lombok-1.18.42.jar" />
         </processorPath>
-        <module name="doc-stat-history.doc-stat-history.main~1" />
-        <module name="doc-stat-history.doc-stat-history.test~1" />
+        <module name="doc-stat-history.doc-stat-history.main" />
+        <module name="doc-stat-history.doc-stat-history.test" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
-      <module name="doc-stat-history.doc-stat-history.main" target="21" />
-      <module name="doc-stat-history.doc-stat-history.test" target="21" />
+      <module name="doc-stat-history.doc-stat-history.main~1" target="21" />
+      <module name="doc-stat-history.doc-stat-history.test~1" target="21" />
     </bytecodeTargetLevel>
   </component>
 </project>

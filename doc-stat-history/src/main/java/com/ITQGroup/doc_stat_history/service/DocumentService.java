@@ -2,20 +2,18 @@ package com.ITQGroup.doc_stat_history.service;
 
 import com.ITQGroup.doc_stat_history.common.DocumentStatus;
 import com.ITQGroup.doc_stat_history.dto.CreateDocumentRequest;
+import com.ITQGroup.doc_stat_history.dto.CursorResponse;
 import com.ITQGroup.doc_stat_history.dto.DocumentResponse;
 import com.ITQGroup.doc_stat_history.dto.DocumentSearchRequest;
 import com.ITQGroup.doc_stat_history.entity.Document;
 import com.ITQGroup.doc_stat_history.exception.DocumentNotFoundException;
 import com.ITQGroup.doc_stat_history.mapper.DocumentMapper;
 import com.ITQGroup.doc_stat_history.repository.DocumentRepository;
-import com.ITQGroup.doc_stat_history.repository.DocumentSpecification;
 import com.ITQGroup.doc_stat_history.util.UniqueNumberGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.ScrollPosition;
-import org.springframework.data.domain.Window;
+import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,19 +60,38 @@ public class DocumentService {
 
     // Пакетное получение документов по списку id с пагинацией и сортировкой.
     @Transactional(readOnly = true)
-    public Page<DocumentResponse> getByIds(List<Long> ids, Pageable pageable) {
+    public Slice<DocumentResponse> getByIds(List<Long> ids, Pageable pageable) {
         return documentRepository.findByIdIn(ids, pageable)
                 .map(mapper::toResponse);
     }
 
     // Поиск документов с динамическими фильтрами (по createdAt)
     @Transactional(readOnly = true)
-    public Window<DocumentResponse> search(DocumentSearchRequest req,
-                                           int limit,
-                                           ScrollPosition scrollPosition) {
-        var spec = DocumentSpecification.withFilters(
-                req.status(), req.author(), req.from(), req.to());
-        return documentRepository.scrollBySpec(spec, limit, scrollPosition)
-                .map(mapper::toResponse);
+    public CursorResponse<DocumentResponse> search(DocumentSearchRequest req,
+                                                   int limit,
+                                                   Long cursor) {
+        // Передаём status как String — нативный запрос не знает про enum
+        String statusStr = req.status() != null ? req.status().name() : null;
+
+        List<Document> docs = documentRepository.searchWithCursor(
+                statusStr,
+                req.author(),
+                req.from(),
+                req.to(),
+                cursor,
+                limit
+        );
+
+        // Маппим в DTO
+        List<DocumentResponse> content = docs.stream()
+                .map(mapper::toResponse)
+                .toList();
+
+        // id последнего элемента становится курсором следующей страницы
+        Long nextCursor = content.isEmpty()
+                ? null
+                : docs.getLast().getId();
+
+        return CursorResponse.of(content, limit, nextCursor);
     }
 }

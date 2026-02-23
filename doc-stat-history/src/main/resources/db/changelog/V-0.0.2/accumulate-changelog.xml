@@ -4,6 +4,5 @@
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
         xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.6.xsd">
 
-    <include file="V-0.0.1/accumulate-changelog.xml" relativeToChangelogFile="true"/>
-    <include file="V-0.0.2/accumulate-changelog.xml" relativeToChangelogFile="true"/>
+    <include file="add-sql-script-searching-docs.xml" relativeToChangelogFile="true"/>
 </databaseChangeLog>

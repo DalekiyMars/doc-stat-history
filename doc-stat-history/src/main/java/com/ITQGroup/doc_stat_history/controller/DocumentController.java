@@ -2,6 +2,7 @@ package com.ITQGroup.doc_stat_history.controller;
 
 import com.ITQGroup.doc_stat_history.common.DocumentStatus;
 import com.ITQGroup.doc_stat_history.dto.CreateDocumentRequest;
+import com.ITQGroup.doc_stat_history.dto.CursorResponse;
 import com.ITQGroup.doc_stat_history.dto.DocumentResponse;
 import com.ITQGroup.doc_stat_history.dto.DocumentSearchRequest;
 import com.ITQGroup.doc_stat_history.service.DocumentService;
@@ -11,10 +12,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.ScrollPosition;
-import org.springframework.data.domain.Window;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -58,7 +57,7 @@ public class DocumentController {
 
     // Пакетное получение по списку id с пагинацией и сортировкой.
     @GetMapping("/batch")
-    public Page<DocumentResponse> getByIds(
+    public Slice<DocumentResponse> getByIds(
             @RequestParam @NotEmpty @Size(max = 1000) List<Long> ids,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
         return documentService.getByIds(ids, pageable);
@@ -67,7 +66,7 @@ public class DocumentController {
     // Поиск с динамическими фильтрами. Все параметры опциональны.
     // Период фильтруется по createdAt
     @GetMapping("/search")
-    public Window<DocumentResponse> search(
+    public CursorResponse<DocumentResponse> search(
             @RequestParam(required = false) DocumentStatus status,
             @RequestParam(required = false) String author,
             @RequestParam(required = false)
@@ -75,14 +74,8 @@ public class DocumentController {
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int limit,
-            @RequestParam(required = false) Long scrollId) {
+            @RequestParam(required = false) Long cursor) {
 
-        // scrollId == null → первая страница; иначе → продолжение с позиции scrollId
-        ScrollPosition position = scrollId == null
-                ? ScrollPosition.keyset()
-                : ScrollPosition.forward(java.util.Map.of("id", scrollId));
-
-        var searchRequest = new DocumentSearchRequest(status, author, from, to);
-        return documentService.search(searchRequest, limit, position);
+        return documentService.search(new DocumentSearchRequest(status, author, from, to), limit, cursor);
     }
 }

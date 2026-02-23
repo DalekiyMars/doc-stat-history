@@ -20,11 +20,6 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
-/**
- * Выделен в отдельный бин специально, чтобы @Transactional(REQUIRES_NEW)
- * работал через Spring-прокси — вызовы приходят извне класса (из TransitionService),
- * а не через this, поэтому прокси перехватывает их корректно.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor

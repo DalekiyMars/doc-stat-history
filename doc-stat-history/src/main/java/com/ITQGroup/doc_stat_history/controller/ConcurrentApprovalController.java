@@ -22,7 +22,6 @@ public class ConcurrentApprovalController {
     private final ConcurrentApprovalService concurrentApprovalService;
 
     // Запускает attempts параллельных попыток утвердить документ.
-    // Ожидаемый результат: ровно 1 SUCCESS, остальные CONFLICT.
     @PostMapping("/{id}/concurrent-approve")
     public ConcurrentApprovalResult concurrentApprove(
             @PathVariable Long id,

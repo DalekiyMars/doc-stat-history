@@ -12,6 +12,9 @@
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
+      <module name="com.ITQGroup.doc-stat-history" target="21" />
+      <module name="com.ITQGroup.doc-stat-history.main" target="21" />
+      <module name="com.ITQGroup.doc-stat-history.test" target="21" />
       <module name="doc-stat-history.doc-stat-history.main~1" target="21" />
       <module name="doc-stat-history.doc-stat-history.test~1" target="21" />
     </bytecodeTargetLevel>

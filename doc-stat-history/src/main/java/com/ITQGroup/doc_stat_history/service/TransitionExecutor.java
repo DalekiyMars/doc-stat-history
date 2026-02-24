@@ -5,10 +5,8 @@ import com.ITQGroup.doc_stat_history.common.DocumentStatus;
 import com.ITQGroup.doc_stat_history.common.ResultStatus;
 import com.ITQGroup.doc_stat_history.dto.TransitionResult;
 import com.ITQGroup.doc_stat_history.entity.ApprovalRegistry;
-import com.ITQGroup.doc_stat_history.entity.Audit;
 import com.ITQGroup.doc_stat_history.entity.Document;
 import com.ITQGroup.doc_stat_history.repository.ApprovalRegistryRepository;
-import com.ITQGroup.doc_stat_history.repository.AuditRepository;
 import com.ITQGroup.doc_stat_history.repository.DocumentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,9 +24,9 @@ import java.util.Objects;
 public class TransitionExecutor {
 
     private final DocumentRepository documentRepository;
-    private final AuditRepository auditRepository;
     private final ApprovalRegistryRepository registryRepository;
     private final Clock clock;
+    private final AuditService auditService;
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public TransitionResult submitOne(Long id, String initiator, String comment) {
@@ -40,8 +38,8 @@ public class TransitionExecutor {
                                 "Expected DRAFT, got " + doc.getStatus());
                     }
                     doc.setStatus(DocumentStatus.SUBMITTED);
-                    saveAudit(doc, initiator, ActionType.SUBMIT, comment);
                     documentRepository.save(doc);
+                    auditService.saveAudit(doc, initiator, ActionType.SUBMIT, comment);
                     log.info("Document {} submitted by {}", id, initiator);
                     return new TransitionResult(id, ResultStatus.SUCCESS, null);
                 })
@@ -64,10 +62,10 @@ public class TransitionExecutor {
         }
 
         doc.setStatus(DocumentStatus.APPROVED);
-        saveAudit(doc, initiator, ActionType.APPROVE, comment);
         documentRepository.save(doc);
+        auditService.saveAudit(doc, initiator, ActionType.APPROVE, comment);
 
-        // Запись в реестр. При исключении Spring откатит всю REQUIRES_NEW транзакцию
+        // Запись в реестр. При исключении Spring откатит всю транзакцию
         // документ вернётся в SUBMITTED, аудит тоже не сохранится.
         try {
             ApprovalRegistry registry = new ApprovalRegistry()
@@ -81,15 +79,5 @@ public class TransitionExecutor {
             log.error("Registry save failed for document {}: {}", id, e.getMessage());
             throw new RuntimeException("Registry error: " + e.getMessage(), e);
         }
-    }
-
-    private void saveAudit(Document doc, String initiator, ActionType actionType, String comment) {
-        Audit audit = new Audit()
-                            .setDocument(doc)
-                            .setActionAuthor(initiator)
-                            .setActionTime(LocalDateTime.now(clock))
-                            .setActionType(actionType)
-                            .setComment(comment);
-        auditRepository.save(audit);
     }
 }

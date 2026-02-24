@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.6.xsd">
+
+    <changeSet id="create-approval-registry-seq" author="Eugene">
+        <preConditions onFail="CONTINUE">
+            <not>
+                <sequenceExists sequenceName="approval_registry_id_seq" schemaName="entity_tables"/>
+            </not>
+        </preConditions>
+        <createSequence sequenceName="approval_registry_id_seq"
+                        schemaName="entity_tables"
+                        startValue="1"
+                        incrementBy="50"/>
+    </changeSet>
+
+    <!-- Создание таблицы approval_registry -->
+    <changeSet id="create-approval_registry-table" author="Eugene">
+        <preConditions onFail="CONTINUE">
+            <not>
+                <tableExists tableName="approval_registry" schemaName="entity_tables"/>
+            </not>
+        </preConditions>
+        <createTable tableName="approval_registry" schemaName="entity_tables">
+            <column name="id" type="BIGINT" defaultValueComputed="nextval('entity_tables.approval_registry_id_seq')">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="document_id" type="BIGINT">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="approved_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="initiator" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseColumnNames="document_id"
+                                 baseTableName="approval_registry"
+                                 baseTableSchemaName="entity_tables"
+                                 constraintName="fk_registry_document"
+                                 referencedColumnNames="id"
+                                 referencedTableName="documents"
+                                 referencedTableSchemaName="entity_tables"/>
+    </changeSet>
+</databaseChangeLog>

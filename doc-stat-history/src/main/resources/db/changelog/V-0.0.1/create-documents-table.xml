@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.6.xsd">
+
+    <changeSet id="create-documents-seq" author="Eugene">
+        <preConditions onFail="CONTINUE">
+            <not>
+                <sequenceExists sequenceName="documents_id_seq" schemaName="entity_tables"/>
+            </not>
+        </preConditions>
+        <createSequence sequenceName="documents_id_seq"
+                        schemaName="entity_tables"
+                        startValue="1"
+                        incrementBy="50"/>
+    </changeSet>
+
+    <!-- Создание таблицы documents -->
+    <changeSet id="create-docs-table" author="Eugene">
+        <preConditions onFail="CONTINUE">
+            <not>
+                <tableExists tableName="documents" schemaName="entity_tables"/>
+            </not>
+        </preConditions>
+        <createTable tableName="documents" schemaName="entity_tables">
+            <column name="id" type="BIGINT" defaultValueComputed="nextval('entity_tables.documents_id_seq')">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="author" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unique_number" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="doc_name" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_update" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <sql>ALTER TABLE entity_tables.documents ADD CONSTRAINT chk_status CHECK (status IN ('DRAFT','SUBMITTED','APPROVED'));</sql>
+    </changeSet>
+</databaseChangeLog>

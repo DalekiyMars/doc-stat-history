@@ -1,6 +1,7 @@
 package com.ITQGroup.doc_stat_history.service;
 
 import com.ITQGroup.doc_stat_history.common.DocumentStatus;
+import com.ITQGroup.doc_stat_history.dto.BatchCreateRequest;
 import com.ITQGroup.doc_stat_history.dto.CreateDocumentRequest;
 import com.ITQGroup.doc_stat_history.dto.CursorResponse;
 import com.ITQGroup.doc_stat_history.dto.DocumentResponse;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -27,6 +29,26 @@ public class DocumentService {
     private final DocumentRepository documentRepository;
     private final DocumentMapper mapper;
     private final UniqueNumberGenerator numberGenerator;
+
+    @Transactional
+    public List<DocumentResponse> createBatch(BatchCreateRequest request) {
+        long startMs = System.currentTimeMillis();
+
+        List<Document> docs = request.documents().parallelStream()  // Параллельно генерируем uniqueNumber
+                .map(req -> new Document()
+                        .setAuthor(req.author())
+                        .setDocName(req.docName())
+                        .setUniqueNumber(numberGenerator.generate())
+                        .setStatus(DocumentStatus.DRAFT))
+                .collect(Collectors.toList());
+
+        List<Document> saved = documentRepository.saveAll(docs);  // Batch insert
+        log.info("Batch create: size={}, elapsed={}ms", saved.size(), System.currentTimeMillis() - startMs);
+
+        return saved.stream()
+                .map(mapper::toResponse)
+                .toList();
+    }
 
     // Создание документа в статусе DRAFT.
     @Transactional

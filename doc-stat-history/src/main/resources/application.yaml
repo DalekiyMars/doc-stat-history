@@ -14,7 +14,7 @@ spring:
       hibernate:
         order_updates: true
         jdbc:
-          batch_size: 100
+          batch_size: 50
           batch_versioned_data: true
   threads:
     virtual:

@@ -36,4 +36,4 @@ WHERE (p_status IS NULL OR d.status      = p_status)
   AND (p_cursor IS NULL OR d.id          > p_cursor)
 ORDER BY d.id
     LIMIT p_limit;
-$$;  -- ✅ только $$ и точка с запятой — без END и без повторного LANGUAGE
+$$;

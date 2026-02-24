@@ -62,7 +62,7 @@ public class DocumentService {
                     .setActionType(ActionType.CREATE)
                     .setComment(null));
         }
-        auditService.saveAll(audits);  // Batch save audits
+        auditService.saveAll(audits);
 
         long elapsedMs = System.currentTimeMillis() - startMs;
         log.info("Batch create: size={}, elapsed={}ms", saved.size(), elapsedMs);

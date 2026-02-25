@@ -11,7 +11,6 @@ import com.ITQGroup.doc_stat_history.entity.Audit;
 import com.ITQGroup.doc_stat_history.entity.Document;
 import com.ITQGroup.doc_stat_history.exception.DocumentNotFoundException;
 import com.ITQGroup.doc_stat_history.mapper.DocumentMapper;
-import com.ITQGroup.doc_stat_history.repository.AuditRepository;
 import com.ITQGroup.doc_stat_history.repository.DocumentRepository;
 import com.ITQGroup.doc_stat_history.util.UniqueNumberGenerator;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +36,6 @@ public class DocumentService {
     private final UniqueNumberGenerator numberGenerator;
     private final AuditService auditService;
     private final Clock clock;
-    private final AuditRepository auditRepository;
 
     @Transactional
     public List<DocumentResponse> createBatch(BatchCreateRequest request) {

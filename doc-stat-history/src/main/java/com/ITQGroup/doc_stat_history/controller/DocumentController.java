@@ -1,6 +1,7 @@
 package com.ITQGroup.doc_stat_history.controller;
 
 import com.ITQGroup.doc_stat_history.common.DocumentStatus;
+import com.ITQGroup.doc_stat_history.dto.BatchCreateRequest;
 import com.ITQGroup.doc_stat_history.dto.CreateDocumentRequest;
 import com.ITQGroup.doc_stat_history.dto.CursorResponse;
 import com.ITQGroup.doc_stat_history.dto.DocumentResponse;
@@ -53,6 +54,13 @@ public class DocumentController {
         return withHistory
                 ? documentService.getWithAudits(id)
                 : documentService.getById(id);
+    }
+
+    // Пакетное сохранение документов
+    @PostMapping("/batch")
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<DocumentResponse> createBatch(@Valid @RequestBody BatchCreateRequest request) {
+        return documentService.createBatch(request);
     }
 
     // Пакетное получение по списку id с пагинацией и сортировкой.

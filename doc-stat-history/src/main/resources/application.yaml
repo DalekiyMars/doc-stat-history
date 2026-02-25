@@ -14,7 +14,7 @@ spring:
       hibernate:
         order_updates: true
         jdbc:
-          batch_size: 100
+          batch_size: 50
           batch_versioned_data: true
   threads:
     virtual:
@@ -22,7 +22,7 @@ spring:
 
 app:
   document:
-    number-prefix: DOC        # префикс уникального номера — настраивается без перекомпиляции
+    number-prefix: DOC        # префикс уникального номера
   worker:
     batch-size: 50            # размер пачки для обоих воркеров
     submit-delay-ms: 30000    # интервал SUBMIT-worker

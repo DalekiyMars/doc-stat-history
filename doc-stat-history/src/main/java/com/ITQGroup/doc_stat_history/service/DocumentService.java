@@ -1,10 +1,13 @@
 package com.ITQGroup.doc_stat_history.service;
 
+import com.ITQGroup.doc_stat_history.common.ActionType;
 import com.ITQGroup.doc_stat_history.common.DocumentStatus;
+import com.ITQGroup.doc_stat_history.dto.BatchCreateRequest;
 import com.ITQGroup.doc_stat_history.dto.CreateDocumentRequest;
 import com.ITQGroup.doc_stat_history.dto.CursorResponse;
 import com.ITQGroup.doc_stat_history.dto.DocumentResponse;
 import com.ITQGroup.doc_stat_history.dto.DocumentSearchRequest;
+import com.ITQGroup.doc_stat_history.entity.Audit;
 import com.ITQGroup.doc_stat_history.entity.Document;
 import com.ITQGroup.doc_stat_history.exception.DocumentNotFoundException;
 import com.ITQGroup.doc_stat_history.mapper.DocumentMapper;
@@ -17,7 +20,11 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -27,18 +34,57 @@ public class DocumentService {
     private final DocumentRepository documentRepository;
     private final DocumentMapper mapper;
     private final UniqueNumberGenerator numberGenerator;
+    private final AuditService auditService;
+    private final Clock clock;
+
+    @Transactional
+    public List<DocumentResponse> createBatch(BatchCreateRequest request) {
+        long startMs = System.currentTimeMillis();
+
+        List<Document> docs = request.documents().parallelStream()
+                .map(req -> new Document()
+                        .setAuthor(req.author())
+                        .setDocName(req.docName())
+                        .setUniqueNumber(numberGenerator.generate())
+                        .setStatus(DocumentStatus.DRAFT))
+                .collect(Collectors.toList());
+
+        List<Document> saved = documentRepository.saveAll(docs);
+
+        // Batch audits
+        List<Audit> audits = new ArrayList<>();
+        for (int i = 0; i < saved.size(); i++) {
+            String initiator = request.documents().get(i).initiator();
+            audits.add(new Audit()
+                    .setDocument(saved.get(i))
+                    .setActionAuthor(initiator)
+                    .setActionTime(LocalDateTime.now(clock))
+                    .setActionType(ActionType.CREATE)
+                    .setComment(null));
+        }
+        auditService.saveAll(audits);
+
+        long elapsedMs = System.currentTimeMillis() - startMs;
+        log.info("Batch create: size={}, elapsed={}ms", saved.size(), elapsedMs);
+
+        return saved.stream()
+                .map(mapper::toResponse)
+                .toList();
+    }
 
     // Создание документа в статусе DRAFT.
     @Transactional
     public DocumentResponse create(CreateDocumentRequest request) {
         Document doc = new Document()
-                            .setAuthor(request.author())
-                            .setDocName(request.docName())
-                            .setStatus(DocumentStatus.DRAFT)
-                            .setUniqueNumber(numberGenerator.generate());
+                .setAuthor(request.author())
+                .setDocName(request.docName())
+                .setUniqueNumber(numberGenerator.generate())
+                .setStatus(DocumentStatus.DRAFT);
 
         Document saved = documentRepository.save(doc);
-        log.info("Document created: id={}, number={}", saved.getId(), saved.getUniqueNumber());
+        auditService.saveAudit(saved, request.initiator(), ActionType.CREATE, null);  // Добавляем аудит
+
+        log.info("Document created: id={}, initiator={}", saved.getId(), request.initiator());
         return mapper.toResponse(saved);
     }
 

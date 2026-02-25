@@ -20,6 +20,7 @@ public class AuditService {
                 .setActionAuthor(author)
                 .setActionType(actionType)
                 .setComment(comment);
+        doc.getAudits().add(audit);
         auditRepository.save(audit);
     }
 

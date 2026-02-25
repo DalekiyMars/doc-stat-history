@@ -1,0 +1,12 @@
+[
+  {
+    "author": "batch-author-1",
+    "docName": "batch-doc-1",
+    "initiator": "batch-initiator"
+  },
+  {
+    "author": "batch-author-2",
+    "docName": "batch-doc-2",
+    "initiator": "batch-initiator"
+  }
+]

@@ -41,7 +41,7 @@ public class DocumentService {
     public List<DocumentResponse> createBatch(BatchCreateRequest request) {
         long startMs = System.currentTimeMillis();
 
-        List<Document> docs = request.documents().parallelStream()
+        List<Document> docs = request.documents().stream()
                 .map(req -> new Document()
                         .setAuthor(req.author())
                         .setDocName(req.docName())

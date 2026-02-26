@@ -11,6 +11,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
@@ -66,4 +68,20 @@ public class Document {
 
     @Version
     private Long version;
+
+    @PrePersist
+    public void prePersist() {
+        LocalDateTime now = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = now;
+        }
+        if (lastUpdate == null) {
+            lastUpdate = now;
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        lastUpdate = LocalDateTime.now();
+    }
 }

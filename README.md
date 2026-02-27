@@ -1,89 +1,154 @@
-# Сервис управления статусами документов
+# Сервис управления документами (Document Status History)
+### Версия сервиса: 0.0.2
 
-Это backend-сервис для работы с документами со статусами (DRAFT, SUBMITTED, APPROVED), историей аудита и реестром утверждений. Включает фоновые workers для батч-обработки и утилиту для массового создания документов.
+Backend-сервис для работы с документами, их статусами (DRAFT → SUBMITTED → APPROVED), историей изменений и реестром утверждений.  
+Включает фоновые воркеры для пакетной обработки и отдельную утилиту для массового создания документов.
 
 ## Стек технологий
-- Java + Spring Boot
-- PostgreSQL (через Docker Compose)
-- JPA/Hibernate
-- Liquibase для миграций
-- Gradle для сборки
 
-## Предварительные требования
-- Java 21+ (JDK)
-- Gradle 8.14+ (для сборки)
-- Docker (для Postgres)
+- Java 21 + Spring Boot 3
+- PostgreSQL (в Docker)
+- JPA / Hibernate (с batch-оптимизациями)
+- Liquibase (миграции)
+- Gradle
+- Testcontainers (для интеграционных тестов)
 
-## Как запустить сервис
-1. **Запуск Postgres через Docker Compose**:
-   - Перейдите в корень проекта.
-   - Выполните: `docker-compose -f compose.yaml up -d`
-   - Это запустит Postgres на порту 13000 (БД: document-util, пользователь: admin, пароль: secret).
+## Требования к окружению
 
-2. **Сборка проекта**:
-   - Выполните: `./gradlew build` (или `gradlew.bat build` на Windows).
-   - Это создаст `build/libs/doc-stat-history-<version>.jar`. На данный момент version: 0.0.2
+- Java 21+
+- Docker (для запуска PostgreSQL)
+- Gradle 7+ (опционально, можно использовать ./gradlew)
 
-3. **Запуск сервиса**: УЖЕ СОБРАНО
-   - Выполните: `java -jar build/libs/doc-stat-history-<version>.jar`
-   - Или из IDE: Запустите основной класс `com.ITQGroup.doc_stat_history.DocStatHistoryApplication`.
-   - Сервис стартует на http://localhost:8080 (порт по умолчанию Spring Boot).
-   - Liquibase автоматически применит миграции при запуске (схемы, таблицы, индексы, SQL-функции).
+## Запуск сервиса
 
-4. **Конфигурация**:
-   - Редактируйте `src/main/resources/application.yaml` для кастомных настроек (например, batch-size workers, задержки, префикс документов).
-   - Логи: Просматривайте консоль или `logs/app.log`. Используйте уровни INFO/WARN для прогресса.
+### 1. Запустите PostgreSQL через Docker Compose
 
-## Как запустить утилиту (массовое создание)
-Утилита (`Main.java`) — standalone консольное приложение для создания батчей документов через API сервиса.
+В корне проекта выполните:
 
-1. **Сборка/компиляция**:
-   - Если отдельный модуль: `./gradlew build` в директории `doc-stat-util`.
-   - Или вручную: `javac Main.java`.
+```bash
+docker-compose up -d
+```
 
-2. **Файл конфигурации**:
-   - Редактируйте `doc-stat-util/src/config.txt` (или передайте как аргумент):
-      serviceUrl=http://localhost:8080/api/v1/documents/batch
-      batches=10
-      batchSize=100
-      delayMs=1000
-      author=utility-author
-      docNamePrefix=TestDoc-
-      initiator=system
-    - `serviceUrl`: Эндпоинт API.
-    - `batches`: Количество батчей.
-    - `batchSize`: Документов в батче.
-    - `delayMs`: Задержка между батчами.
+БД будет доступна на порту 13000:
 
-3. **Запуск**:
-- `java Main <config-file>` (например, `java Main doc-stat-util/src/config.txt`).
-- По умолчанию: `doc-stat-util/src/config.txt`, если без аргумента.
-- Вывод: Логи в консоль, типа "Batch 1/10: Created 100 documents in 500ms".
+- База: document-util
+- Пользователь: admin
+- Пароль: secret
 
-## Как проверить прогресс по логам
-- **Логи сервиса**: 
-- Workers: Ищите "SUBMIT-worker START" или "APPROVE-worker DONE". Показывают размер батча, оставшиеся документы, время выполнения, результаты (SUCCESS/CONFLICT и т.д.).
-- Пример: "APPROVE-worker: processed=50, summary={SUCCESS=45, CONFLICT=5}, elapsed=200ms"
-- Переходы: "Document 123 approved by system".
-- Ошибки: Уровни WARN/ERROR.
-- **Логи утилиты**: Консоль показывает прогресс по батчам, общее время, количество ответов.
-- **Мониторинг**: Следите за логами через `tail -f logs/app.log`.
-- **Проверка в БД**: Используйте pgAdmin/psql для запроса `entity_tables.documents`: `SELECT status, COUNT(*) FROM entity_tables.documents GROUP BY status;`.
+### 2. Сборка и запуск приложения
+```bash
+./gradlew bootRun
+```
 
-## Примеры API
-- Создание: `POST /api/v1/documents` с JSON `{ "author": "user", "docName": "Doc1", "initiator": "user" }`
-- Поиск: `GET /api/v1/documents/search?status=DRAFT&author=user&limit=20`
+Или соберите jar и запустите:
+```bash
+./gradlew build
+java -jar build/libs/doc-stat-history-0.0.2.jar
+```
+Сервис стартует на порту 8080 (по умолчанию).
+### 3. Конфигурация
 
-## Тесты
-Тесты включены (юнит/интеграционные). Запуск: `./gradlew test`.
+Основные параметры находятся в src/main/resources/application.yaml:
+```yaml
+app:
+   document:
+      number-prefix: DOC        # префикс уникального номера документа
+   worker:
+      batch-size: 50            # размер пачки для воркеров
+      submit-delay-ms: 30000    # интервал запуска SUBMIT-worker (мс)
+      approve-delay-ms: 30000   # интервал запуска APPROVE-worker (мс)
+```
+## Утилита массового создания документов
 
-## Возможные улучшения:
-4. **Обработка запросов с 5000+ id**
-   Текущая реализация ограничивает размер батчей до 1000 id (через @Size(max=1000) в валидации для BatchTransitionRequest и BatchCreateRequest), чтобы избежать перегрузки памяти и БД. Для уверенной работы с 5000+ id в одном запросе я бы внес изменения:
-   - Асинхронная обработка: Разделить список id на подбатчи (например, по 1000) и обрабатывать их параллельно с помощью @Async или ExecutorService (как в ConcurrentApprovalService). Это распределит нагрузку и ускорит выполнение.
-   - Очереди сообщений: Вынести обработку в очереди — запрос добавляет задачу в очередь, а background-воркер (расширенный от текущих) обрабатывает пачками. Это обеспечит отказоустойчивость и масштабируемость.
-   - Мониторинг: Добавить метрики (Spring Actuator) для времени обработки и памяти, с лимитами на запрос (например, max 10000 id).
-5. **Вынос реестра утверждений в отдельную систему**
-   Текущий реестр (ApprovalRegistry) интегрирован в ту же БД (schema entity_tables). Для выноса в отдельную систему:
-   - Отдельная БД: Настроить multi-datasource в Spring. Создать @Bean для второго DataSource. В TransitionExecutor инжектировать отдельный repository. Транзакции: Использовать @Transactional с ChainedTransactionManager для кросс-БД запросов.
-   - Отдельный HTTP-сервис: Вынести реестр в микросервис (отдельный Spring Boot app). В основном сервисе использовать RestTemplate для POST /registry/approve с данными (documentId, initiator). Обеспечить идемпотентность unique key на documentId и retry.
+Отдельная консольная утилита (doc-stat-util) создаёт заданное количество документов через API сервиса.
+
+Создайте файл ```config.txt``` (пример в ```doc-stat-util/src/config.txt```):
+```yaml
+service.url=http://localhost:8080
+generator.count=100
+generator.batchSize=50
+generator.initiator=util-generator
+generator.author=util
+generator.docNamePrefix=Generated Document
+```
+
+- ```service.url``` — базовый URL сервиса (без /api)
+- ```generator.count``` — общее количество документов
+- ```generator.batchSize``` — размер одной пачки (максимум 1000, отправляется на /api/v1/documents/batch)
+- остальные параметры задают значения полей документов
+
+## Запуск
+
+Перейдите в директорию doc-stat-util и выполните:
+```bash
+javac Main.java
+java Main config.txt
+```
+Утилита выведет прогресс по каждой пачке и общую статистику:
+
+```txt
+=== Запуск пакетной генерации документов ===
+Задано к созданию: 100 документов
+...
+Пачка 1 (50 док.): успешно 50, ошибок 0, время 245 мс
+Прогресс: 50/100 документов обработано.
+...
+=== Генерация завершена ===
+Всего пачек: 2
+Общее время: 512 мс
+Успешно: 100, ошибок: 0
+```
+Для мониторинга количества документов в разных статусах можно выполнить SQL-запрос:
+```sql 
+SELECT status, COUNT(*) FROM entity_tables.documents GROUP BY status;
+```
+
+API (основные эндпоинты)
+
+   | Метод |                  Эндпоинт                  |                                                          Описание |
+   |:------|:------------------------------------------:|------------------------------------------------------------------:|
+   | POST  |             	/api/v1/documents             |                                    	Создать один документ (DRAFT) |
+   | POST  |          	/api/v1/documents/batch          |                               	Создать пачку документов (до 1000) |
+   | GET   |          	/api/v1/documents/{id}           |       	Получить документ по ID (с историей при ?withHistory=true) |
+   | GET   |     	/api/v1/documents/batch?ids=1,2,3     |                   	Получить документы по списку ID (с пагинацией) |
+   | POST  |         	/api/v1/documents/submit          |          	Отправить документы на согласование (DRAFT → SUBMITTED) |
+   | POST  |         	/api/v1/documents/approve         |                       	Утвердить документы (SUBMITTED → APPROVED) |
+   | GET   |         	/api/v1/documents/search          |      	Поиск с фильтрами (status, author, from, to, limit, cursor) |
+   | POST  | 	/api/v1/documents/{id}/concurrent-approve | 	Тест конкурентного утверждения (с параметрами threads, attempts) |
+
+## Тестирование
+
+Интеграционные тесты используют Testcontainers, поэтому требуется работающий Docker.
+
+Запуск всех тестов:
+```bash 
+./gradlew test
+```
+
+Основные тестовые сценарии покрывают:
+- создание (одиночное и пакетное)
+- получение документов с историей
+- переходы по статусам (включая конфликты)
+- откат утверждения при ошибке записи в реестр
+- частичные успехи в пакетных операциях
+- конкурентное утверждение (ровно одна успешная попытка)
+
+## Опциональные улучшения
+### Обработка запросов с 5000+ ID
+
+Для пакетных операций с очень большим количеством идентификаторов можно:
+
+- Разбивать входной список на подзапросы фиксированного размера (например, по 1000) и обрабатывать их параллельно.
+- Перейти на асинхронную обработку с возвратом 202 Accepted и последующим уведомлением через WebSocket или polling.
+
+### Вынос реестра утверждений в отдельную систему
+
+Если реестр должен быть отдельным микросервисом или БД:
+
+- Заменить прямое сохранение в ApprovalRegistryRepository на вызов внешнего HTTP-сервиса.
+- Обеспечение согласованности: при успешном утверждении вызывать внешний сервис; при ошибке — откат статуса документа.
+- Альтернативно — использовать событийный подход: после утверждения публиковать событие, которое асинхронно обрабатывается потребителем (с повторными попытками при сбоях).
+
+### Примечания
+
+    Подробный анализ планов выполнения запросов и используемых индексов приведён в файле EXPLAIN.md.
